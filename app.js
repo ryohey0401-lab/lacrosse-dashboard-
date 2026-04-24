@@ -7,8 +7,8 @@ let currentSort = { col: null, asc: true };
 let currentMetricFilter = 'all';
 
 let appSettings = {
-    sheetUrl: '',
-    autoSync: false,
+    sheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSph8q-c8d5myCuWF8PVjGcZLi6sKOaXfMnFDgfUisym78gwMhRBLI0HtYKrGVB7xMlL7GHpGPdghg3/pub?output=csv',
+    autoSync: true,
     lastSync: null
 };
 
@@ -230,9 +230,19 @@ function handleConditionUpload(e) {
 
 function processConditionData(rows, silent = false) {
     // Keys based on user input
-    const nameKey = "名前(コートネーム)";
-    const dateKey = "タイムスタンプ";
-    // ヘッダー名が完全一致しなくても対応できるように、includesでの判定を優先します
+    let nameKey = "名前(コートネーム)";
+    let dateKey = "タイムスタンプ";
+
+    // Detect actual keys if the expected ones are slightly different
+    if (rows.length > 0) {
+        const firstRow = rows[0];
+        for (let k in firstRow) {
+            if (k.includes('名前') || k.includes('コートネーム')) nameKey = k;
+            if (k.includes('タイムスタンプ') || k.includes('日付')) dateKey = k;
+        }
+    }
+
+    console.log(`Using nameKey: "${nameKey}", dateKey: "${dateKey}"`);
 
     let playersMap = {}; // name -> player data
     let records = [];
@@ -309,7 +319,7 @@ function processConditionData(rows, silent = false) {
             if (k.includes('痛み、張り感の有無')) details.painStatus = String(row[k]);
             if (k.includes('部位・症状・程度')) details.painDesc = String(row[k]);
             if (k.includes('睡眠の質')) details.sleepQuality = String(row[k]);
-            if (k.includes('活動')) details.activity = parseFloat(row[k]) || null;
+            if (k.includes('活動') || k.includes('合計”時間')) details.activity = parseFloat(row[k]) || null;
             // 月経開始日の抽出
             if (k.includes('月経')) {
                 let mVal = row[k];
@@ -356,6 +366,11 @@ function processConditionData(rows, silent = false) {
 
         records.push({ name, dateStr, year, month, day, fatigue, sleep, details });
     });
+
+    if (records.length === 0) {
+        console.warn("No records were processed. Row keys:", rows.length > 0 ? Object.keys(rows[0]) : "Empty rows");
+        return;
+    }
 
     // Extract unique dates and sort them chronologically by year, month, day
     let uniqueDatesMap = {};
