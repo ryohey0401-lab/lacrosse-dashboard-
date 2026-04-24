@@ -232,8 +232,7 @@ function processConditionData(rows, silent = false) {
     // Keys based on user input
     const nameKey = "名前(コートネーム)";
     const dateKey = "タイムスタンプ";
-    const fatigueKey = "自覚的疲労度";
-    const sleepKey = "”平均”睡眠時間（h）*前週の月曜～日曜日の期間";
+    // ヘッダー名が完全一致しなくても対応できるように、includesでの判定を優先します
 
     let playersMap = {}; // name -> player data
     let records = [];
@@ -307,10 +306,10 @@ function processConditionData(rows, silent = false) {
             if (k.includes('心拍数')) details.hr = parseFloat(row[k]) || null;
             if (k.includes('体重')) details.weight = parseFloat(row[k]) || null;
             if (k.includes('体脂肪率')) details.bodyFat = parseFloat(row[k]) || null;
-            if (k.includes('痛み、張り感')) details.painStatus = String(row[k]);
+            if (k.includes('痛み、張り感の有無')) details.painStatus = String(row[k]);
             if (k.includes('部位・症状・程度')) details.painDesc = String(row[k]);
             if (k.includes('睡眠の質')) details.sleepQuality = String(row[k]);
-            if (k.includes('ラクロス活動')) details.activity = parseFloat(row[k]) || null;
+            if (k.includes('活動')) details.activity = parseFloat(row[k]) || null;
             // 月経開始日の抽出
             if (k.includes('月経')) {
                 let mVal = row[k];
