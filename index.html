@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWLNT コンディションチェック</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- SheetJS (Excel Parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="ph-fill ph-activity"></i>
+                <span>JWLNT</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <i class="ph ph-squares-four"></i>
+                    <span>ダッシュボード</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ph ph-users"></i>
+                    <span>選手一覧</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ph ph-gear"></i>
+                    <span>設定</span>
+                </a>
+            </nav>
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Staff&background=ff3366&color=fff" alt="User Avatar">
+                <div class="user-info">
+                    <span class="user-name">コーチングスタッフ</span>
+                    <span class="user-role">管理者</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>コンディションチェック</h1>
+                    <p>Japan Women's Lacrosse National Team</p>
+                </div>
+                
+                <!-- View Switcher (Removed as it's now Condition only) -->
+                
+                <div class="topbar-actions">
+                    <div id="sync-status" class="sync-status">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- File Inputs for Excel -->
+                    <input type="file" id="file-condition" accept=".xlsx" style="display: none;">
+                    
+                    <div style="display:flex; gap:8px;">
+                        <button class="icon-btn" onclick="openSettings()" title="設定">
+                            <i class="ph ph-gear"></i>
+                        </button>
+                        <button class="primary-btn" onclick="document.getElementById('file-condition').click();">
+                            <i class="ph ph-upload-simple"></i>
+                            手動読込
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Player Selection Tabs -->
+            <div class="player-tabs-container">
+                <button class="player-tab active" data-player-id="team">Team Average</button>
+                <div id="player-tabs-list" class="player-tabs-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                
+                <!-- Condition View -->
+                <div id="view-condition" class="view-section active">
+                    <!-- KPI Cards for Condition -->
+                    <div class="kpi-cards">
+                        <div class="glass-card kpi-card">
+                            <div class="kpi-header">
+                                <h3>Fatigue (1-5)</h3>
+                                <div class="icon-box alert-yellow">
+                                    <i class="ph ph-battery-warning"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-fatigue">--</div>
+                            <div class="kpi-trend positive" id="kpi-fatigue-trend">
+                                <span>Based on recent data</span>
+                            </div>
+                        </div>
+                        <div class="glass-card kpi-card">
+                            <div class="kpi-header">
+                                <h3>Sleep (h)</h3>
+                                <div class="icon-box alert-green">
+                                    <i class="ph ph-moon"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-sleep">--</div>
+                            <div class="kpi-trend negative" id="kpi-sleep-trend">
+                                <span>Based on recent data</span>
+                            </div>
+                        </div>
+                        <div class="glass-card kpi-card">
+                            <div class="kpi-header">
+                                <h3>練習時間(週計)</h3>
+                                <div class="icon-box" style="color: #6366f1; background-color: rgba(99,102,241,0.15);">
+                                    <i class="ph ph-timer"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-practice">--</div>
+                            <div class="kpi-trend" id="kpi-practice-trend">
+                                <span>今週の合計活動時間</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Condition Details Panel (Visible only when a player is selected) -->
+                    <div id="condition-details-panel" class="glass-card" style="margin-top: 24px; display: none;">
+                        <div class="card-header" style="margin-bottom: 16px;">
+                            <h2><i class="ph-fill ph-stethoscope" style="color: var(--primary); margin-right: 8px;"></i>本日の詳細コンディション</h2>
+                        </div>
+                        <div class="condition-details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">疲労度</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-fatigue">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">/ 5</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">睡眠時間</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-sleep">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">h</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">体温</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-temp">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">℃</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">心拍数</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-hr">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">bpm</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">体重</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-weight">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">kg</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">体脂肪率</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-bodyfat">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">%</small></div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">睡眠の質</span>
+                                <div class="detail-value" style="font-size: 1.2rem; font-weight: bold; color: var(--text-main);" id="detail-sleep-quality">--</div>
+                            </div>
+                            <div class="detail-box" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);">
+                                <span class="detail-label" style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 4px;">活動時間</span>
+                                <div class="detail-value" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);"><span id="detail-activity">--</span> <small style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">h</small></div>
+                            </div>
+                        </div>
+                        <div class="pain-section" style="margin-top: 16px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm); border-left: 4px solid var(--danger);">
+                            <h3 style="color: var(--danger); font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph-bold ph-warning-circle"></i> 痛み・張り感の有無と詳細
+                            </h3>
+                            <p id="detail-pain-status" style="font-weight: bold; margin-bottom: 4px; color: var(--text-main);">--</p>
+                            <p id="detail-pain-desc" style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap;">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Condition Chart Area -->
+                    <div class="charts-area condition-charts" style="margin-top: 24px; display: block;">
+                        <div class="glass-card chart-container">
+                            <div class="card-header">
+                                <h2>コンディション推移 <span id="condition-chart-title-suffix">- チーム平均</span></h2>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="conditionLineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Players Table -->
+                <div class="glass-card table-container" style="margin-top: 24px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>選手一覧</h2>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label for="table-date-filter" style="font-size: 0.9rem; color: var(--text-muted);"><i class="ph ph-calendar-blank" style="margin-right: 4px;"></i>日付:</label>
+                            <select id="table-date-filter" style="background: rgba(0,0,0,0.3); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 0.9rem; cursor: pointer;">
+                                <option value="">-- 日付を選択 --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="players-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="name">名前 <i class="ph ph-caret-up-down"></i></th>
+                                <th class="sortable" data-sort="sleep">睡眠時間 <i class="ph ph-caret-up-down"></i></th>
+                                <th class="sortable" data-sort="fatigue">疲労度 <i class="ph ph-caret-up-down"></i></th>
+                                <th>痛み・詳細部位</th>
+                                <th class="sortable" data-sort="status">アラート <i class="ph ph-caret-up-down"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="players-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="glass-card modal-content">
+            <div class="card-header">
+                <h2><i class="ph ph-gear"></i> データ同期設定</h2>
+            </div>
+            
+            <div class="sync-info-box">
+                Googleスプレッドシートをウェブに公開（CSV形式）し、そのURLを入力することで、ダッシュボードを開いた際に自動でデータを読み込みます。
+            </div>
+
+            <div class="form-group">
+                <label for="sheet-url">Googleスプレッドシート CSV URL</label>
+                <input type="text" id="sheet-url" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="auto-sync" style="width: 18px; height: 18px;">
+                <label for="auto-sync" style="margin-bottom: 0;">起動時に自動同期する</label>
+            </div>
+
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeSettings()">キャンセル</button>
+                <button class="primary-btn" onclick="saveSettings()">設定を保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
