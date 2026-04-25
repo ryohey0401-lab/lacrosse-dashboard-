@@ -231,15 +231,27 @@
         <div class="glass-card modal-content">
             <div class="card-header">
                 <h2><i class="ph ph-gear"></i> データ同期設定</h2>
+                <button class="icon-btn" onclick="closeSettings()" title="閉じる" style="margin-left:auto;">
+                    <i class="ph ph-x"></i>
+                </button>
             </div>
-            
+
             <div class="sync-info-box">
-                Googleスプレッドシートをウェブに公開（CSV形式）し、そのURLを入力することで、ダッシュボードを開いた際に自動でデータを読み込みます。
+                <strong><i class="ph ph-list-numbers" style="margin-right:4px;"></i> Googleスプレッドシート連携の手順</strong>
+                <ol style="margin: 8px 0 0 16px; padding:0; line-height:2;">
+                    <li>スプレッドシートを開き、上部メニューから <strong>「ファイル」→「ウェブに公開」</strong> を選択</li>
+                    <li>「リンク」タブで形式を <strong>「カンマ区切りの値（.csv）」</strong> に変更して公開</li>
+                    <li>表示されたURLをコピーして下の欄に貼り付け</li>
+                </ol>
+                <p style="margin: 8px 0 0; color: var(--text-muted); font-size:0.85em;">
+                    ※ 編集用URL（/edit）を貼っても自動でCSV形式に変換します
+                </p>
             </div>
 
             <div class="form-group">
-                <label for="sheet-url">Googleスプレッドシート CSV URL</label>
-                <input type="text" id="sheet-url" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
+                <label for="sheet-url">スプレッドシート URL（公開済み）</label>
+                <input type="text" id="sheet-url" class="form-input"
+                    placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
             </div>
 
             <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
@@ -247,8 +259,11 @@
                 <label for="auto-sync" style="margin-bottom: 0;">起動時に自動同期する</label>
             </div>
 
-            <div class="modal-footer">
+            <div class="modal-footer" style="gap:8px; flex-wrap:wrap;">
                 <button class="secondary-btn" onclick="closeSettings()">キャンセル</button>
+                <button class="secondary-btn" onclick="testSyncNow()" id="test-sync-btn">
+                    <i class="ph ph-arrows-clockwise"></i> 今すぐ同期テスト
+                </button>
                 <button class="primary-btn" onclick="saveSettings()">設定を保存</button>
             </div>
         </div>

@@ -6,8 +6,11 @@ let currentActivePlayerId = 'team'; // 'team' or player name string
 let currentSort = { col: null, asc: true };
 let currentMetricFilter = 'all';
 
+// デフォルトのスプレッドシートCSV URL（変更する場合は設定画面から）
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSph8q-c8d5myCuWF8PVjGcZLi6sKOaXfMnFDgfUisym78gwMhRBLI0HtYKrGVB7xMlL7GHpGPdghg3/pub?output=csv';
+
 let appSettings = {
-    sheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSph8q-c8d5myCuWF8PVjGcZLi6sKOaXfMnFDgfUisym78gwMhRBLI0HtYKrGVB7xMlL7GHpGPdghg3/pub?output=csv',
+    sheetUrl: DEFAULT_SHEET_URL,
     autoSync: true,
     lastSync: null
 };
@@ -17,9 +20,10 @@ function loadSettings() {
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            appSettings = Object.assign(appSettings, parsed);
+            // LocalStorageにURLが保存されていない場合はデフォルトURLを維持する
+            appSettings = Object.assign({ sheetUrl: DEFAULT_SHEET_URL, autoSync: true }, parsed);
         } catch (e) {
-            console.error("Failed to load settings", e);
+            console.error('設定の読み込みに失敗しました', e);
         }
     }
 }
@@ -62,35 +66,117 @@ function closeSettings() {
     document.getElementById('settings-modal').style.display = 'none';
 }
 
+async function testSyncNow() {
+    let url = document.getElementById('sheet-url').value.trim();
+    if (!url) {
+        alert('URLを入力してください。');
+        return;
+    }
+    // 自動URL変換
+    if (url.includes('docs.google.com/spreadsheets/d/')) {
+        if (url.includes('/edit')) {
+            const baseUrl = url.split('/edit')[0];
+            const params = new URLSearchParams(url.split('?')[1] || '');
+            const gid = params.get('gid');
+            url = `${baseUrl}/pub?output=csv${gid ? '&gid=' + gid : ''}`;
+            document.getElementById('sheet-url').value = url;
+        } else if (!url.includes('/pub')) {
+            url = url.replace(/\/+$/, '') + '/pub?output=csv';
+            document.getElementById('sheet-url').value = url;
+        }
+    }
+    const btn = document.getElementById('test-sync-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '同期中...'; }
+    await syncDataFromUrl(url);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> 今すぐ同期テスト'; }
+}
+
+// GoogleスプレッドシートのCSVをパースするユーティリティ
+function parseCSVText(csvText) {
+    const lines = csvText.split('\n').map(l => l.trimEnd());
+    if (lines.length < 2) return [];
+
+    // ヘッダー行をパース（クォート対応）
+    function parseLine(line) {
+        const cells = [];
+        let current = '';
+        let inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuote && line[i + 1] === '"') { current += '"'; i++; }
+                else { inQuote = !inQuote; }
+            } else if (ch === ',' && !inQuote) {
+                cells.push(current); current = '';
+            } else {
+                current += ch;
+            }
+        }
+        cells.push(current);
+        return cells;
+    }
+
+    const headers = parseLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const cells = parseLine(lines[i]);
+        const row = {};
+        headers.forEach((h, idx) => { row[h] = cells[idx] !== undefined ? cells[idx] : ''; });
+        rows.push(row);
+    }
+    console.log(`CSV解析完了: ${rows.length}行, ヘッダー:`, headers);
+    return rows;
+}
+
 async function syncDataFromUrl(url) {
     if (!url) return;
-    
+
     updateSyncStatus('syncing', '同期中...');
-    
+
     try {
+        // CORSプロキシなしで直接フェッチ（GitHub Pages等のhttps環境で動作）
         const response = await fetch(url);
-        if (!response.ok) throw new Error('ネットワークエラーが発生しました');
-        
-        const arrayBuffer = await response.arrayBuffer();
-        const data = new Uint8Array(arrayBuffer);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet);
-        
-        processConditionData(rows, true); // true for silent
-        
+        if (!response.ok) throw new Error(`HTTPエラー: ${response.status}`);
+
+        // CSVはテキストとして取得する（バイナリではない）
+        const csvText = await response.text();
+        console.log('CSV取得成功, 先頭200文字:', csvText.substring(0, 200));
+
+        // まずXLSXライブラリでパースを試みる（より確実）
+        let rows;
+        try {
+            const workbook = XLSX.read(csvText, { type: 'string' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+            console.log('XLSX.jsでのCSV解析成功:', rows.length, '行');
+        } catch (xlsxErr) {
+            console.warn('XLSX.js解析失敗、フォールバックパーサーを使用:', xlsxErr);
+            rows = parseCSVText(csvText);
+        }
+
+        if (rows.length === 0) {
+            throw new Error('データが0件です。スプレッドシートの公開設定とURLを確認してください。');
+        }
+
+        processConditionData(rows, true);
+
         appSettings.lastSync = new Date().toISOString();
         localStorage.setItem('lacrosse_settings', JSON.stringify(appSettings));
-        
-        const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         updateSyncStatus('success', `同期完了 (${timeStr})`);
+
     } catch (e) {
-        console.error("Sync failed", e);
+        console.error('同期失敗:', e);
         if (window.location.protocol === 'file:') {
             updateSyncStatus('error', '同期失敗 (ブラウザ制限)');
-            alert('【同期失敗の原因】\nブラウザのセキュリティ制限により、ファイルを直接開いている状態(file://)では外部データの取得ができません。\n\nVS Codeの「Live Server」を使用するか、GitHub Pagesなどにアップロードして運用してください。\n※ローカルファイルのまま使用する場合は「手動読込」ボタンをお使いください。');
+            alert('【同期できない理由】\nファイルを直接ブラウザで開いている（file://）ため、外部への通信がブロックされています。\n\n' +
+                  '▶ 解決策: GitHub Pagesにアップロードして使用するか、\n' +
+                  '  VS Codeの「Live Server」拡張機能でローカルサーバーを起動してください。\n\n' +
+                  'データを手動で読み込む場合は「手動読込」ボタンをご利用ください。');
         } else {
-            updateSyncStatus('error', '同期失敗');
+            updateSyncStatus('error', `同期失敗: ${e.message}`);
         }
     }
 }
