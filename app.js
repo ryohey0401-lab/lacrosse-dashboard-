@@ -615,7 +615,12 @@ function populatePlayersTable() {
         const details = (dateIndex >= 0 && player.detailsHistory) ? (player.detailsHistory[dateIndex] || {}) : (player.currentDetails || {});
 
         const painStatus = details.painStatus || "なし";
-        const hasPain = painStatus.trim() !== 'なし' && painStatus.trim() !== '' && painStatus.trim() !== '--';
+        const hasPainStr = painStatus.includes('痛み');
+        const hasTightnessStr = painStatus.includes('張り感');
+        const hasOtherPainStatus = !hasPainStr && !hasTightnessStr && painStatus.trim() !== 'なし' && painStatus.trim() !== '' && painStatus.trim() !== '--';
+
+        const painRedAlert = hasPainStr || hasOtherPainStatus;
+        const painYellowAlert = hasTightnessStr && !hasPainStr;
 
         const sleepAlert = (sleep || 0) <= 5;
         const fatigueRedAlert = (fatigue || 0) >= 5;
@@ -625,10 +630,10 @@ function populatePlayersTable() {
         const alertStyleYellow = 'color: #fbbf24; font-weight: bold;';
         
         let statusHtml = '';
-        if (sleepAlert || fatigueRedAlert || hasPain) {
+        if (sleepAlert || fatigueRedAlert || painRedAlert) {
             // 赤アラート (高リスク)
             statusHtml = `<span class="status-badge status-danger"><i class="ph-fill ph-warning-circle"></i> アラート</span>`;
-        } else if (fatigueYellowAlert) {
+        } else if (fatigueYellowAlert || painYellowAlert) {
             // 黄色アラート (中リスク)
             statusHtml = `<span class="status-badge status-warning"><i class="ph-fill ph-warning"></i> 注意</span>`;
         } else {
@@ -636,9 +641,13 @@ function populatePlayersTable() {
         }
 
         let painDisplay = painStatus;
-        if (hasPain && details.painDesc) {
+        if ((painRedAlert || painYellowAlert) && details.painDesc) {
             painDisplay += `<br><small style="color:var(--text-muted);">${details.painDesc}</small>`;
         }
+
+        let tdStylePain = '';
+        if (painRedAlert) tdStylePain = alertStyleRed;
+        else if (painYellowAlert) tdStylePain = alertStyleYellow;
 
         const alertStyle = 'color: #f87171; font-weight: bold;';
 
@@ -652,7 +661,7 @@ function populatePlayersTable() {
             </td>
             <td style="${sleepAlert ? alertStyleRed : ''}">${(sleep || 0).toFixed(1)}h</td>
             <td style="${fatigueRedAlert ? alertStyleRed : fatigueYellowAlert ? alertStyleYellow : ''}">${(fatigue || 0).toFixed(1)}</td>
-            <td style="max-width: 250px; white-space: normal; line-height: 1.4; ${hasPain ? alertStyleRed : ''}">${painDisplay}</td>
+            <td style="max-width: 250px; white-space: normal; line-height: 1.4; ${tdStylePain}">${painDisplay}</td>
             <td>${statusHtml}</td>
         `;
         tbody.appendChild(tr);
@@ -781,10 +790,19 @@ function initSort() {
                     case 'status':
                         const painA = ((a.currentDetails || {}).painStatus || "なし").trim();
                         const painB = ((b.currentDetails || {}).painStatus || "なし").trim();
-                        const hasPainA = painA !== 'なし' && painA !== '' && painA !== '--';
-                        const hasPainB = painB !== 'なし' && painB !== '' && painB !== '--';
-                        const scoreA = (a.currentSleep <= 5 || a.currentFatigue >= 5 || hasPainA) ? 2 : (a.currentFatigue === 4 ? 1.5 : 1);
-                        const scoreB = (b.currentSleep <= 5 || b.currentFatigue >= 5 || hasPainB) ? 2 : (b.currentFatigue === 4 ? 1.5 : 1);
+                        
+                        const getPainScore = (status) => {
+                            if (status === 'なし' || status === '' || status === '--') return 0;
+                            if (status.includes('痛み')) return 2; // 赤アラート相当
+                            if (status.includes('張り感')) return 1.5; // 黄色アラート相当
+                            return 2; // その他の異常は赤とする
+                        };
+                        
+                        const painScoreA = getPainScore(painA);
+                        const painScoreB = getPainScore(painB);
+                        
+                        const scoreA = (a.currentSleep <= 5 || a.currentFatigue >= 5 || painScoreA === 2) ? 2 : (a.currentFatigue === 4 || painScoreA === 1.5 ? 1.5 : 1);
+                        const scoreB = (b.currentSleep <= 5 || b.currentFatigue >= 5 || painScoreB === 2) ? 2 : (b.currentFatigue === 4 || painScoreB === 1.5 ? 1.5 : 1);
                         return currentSort.asc ? scoreA - scoreB : scoreB - scoreA;
                     default: return 0;
                 }
