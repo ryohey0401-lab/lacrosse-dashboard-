@@ -164,7 +164,8 @@ async function syncDataFromUrl(url) {
         appSettings.lastSync = new Date().toISOString();
         localStorage.setItem('lacrosse_settings', JSON.stringify(appSettings));
 
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // 日本時間で時刻を表示
+        const timeStr = new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
         updateSyncStatus('success', `同期完了 (${timeStr})`);
 
     } catch (e) {
@@ -241,7 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
         syncDataFromUrl(appSettings.sheetUrl);
     } else if (appSettings.lastSync) {
         const time = new Date(appSettings.lastSync);
-        const timeStr = time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        // 日本時間で時刻を表示
+        const timeStr = time.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
         updateSyncStatus('success', `最終同期: ${timeStr}`);
     }
 });
@@ -366,9 +368,11 @@ function processConditionData(rows, silent = false) {
         
         if (typeof rawDate === 'number') {
             let jsDate = new Date((rawDate - 25569) * 86400 * 1000);
-            year = jsDate.getFullYear();
-            month = jsDate.getMonth() + 1;
-            day = jsDate.getDate();
+            // 日本時間（JST）で年月日を取得
+            const jstParts = jsDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'numeric', day: 'numeric' }).split('/');
+            year = parseInt(jstParts[0]);
+            month = parseInt(jstParts[1]);
+            day = parseInt(jstParts[2]);
             dateStr = `${year}/${month}/${day}`;
         } else if (typeof rawDate === 'string') {
             let matchYMD = rawDate.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
