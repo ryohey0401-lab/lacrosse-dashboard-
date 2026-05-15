@@ -367,7 +367,7 @@ function processConditionData(rows, silent = false) {
         let month = 0, day = 0;
         
         if (typeof rawDate === 'number') {
-            let jsDate = new Date((rawDate - 25569) * 86400 * 1000);
+            let jsDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
             // シリアル値はスプレッドシートのローカル時間（JST等）を表しています。
             // (rawDate - 25569) * 86400 * 1000 でUTCとしてDateオブジェクトを生成したため、
             // getUTC... メソッドを使うことで元のローカル年月日をそのまま取得できます。
@@ -427,7 +427,7 @@ function processConditionData(rows, silent = false) {
                 if (mVal) {
                     if (typeof mVal === 'number') {
                         // Excelシリアル日付
-                        let mDate = new Date((mVal - 25569) * 86400 * 1000);
+                        let mDate = new Date(Math.round((mVal - 25569) * 86400 * 1000));
                         details.menstrualDate = mDate.toISOString().split('T')[0];
                     } else if (typeof mVal === 'string' && mVal.trim() !== '' && mVal.trim() !== '--' && mVal.trim() !== 'なし') {
                         // 文字列日付をパース (YYYY/MM/DD, YYYY-MM-DD, MM/DD 等)
