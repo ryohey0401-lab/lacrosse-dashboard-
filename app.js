@@ -824,32 +824,41 @@ function initSort() {
 }
 
 function initCharts() {
-    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.color = '#64748b'; // Updated for light theme
     Chart.defaults.font.family = "'Outfit', sans-serif";
     
     const ctxLine = document.getElementById('conditionLineChart').getContext('2d');
     const gradientFatigue = ctxLine.createLinearGradient(0, 0, 0, 400);
-    gradientFatigue.addColorStop(0, 'rgba(236, 72, 153, 0.5)'); 
-    gradientFatigue.addColorStop(1, 'rgba(236, 72, 153, 0.0)');
+    gradientFatigue.addColorStop(0, 'rgba(219, 39, 119, 0.3)'); 
+    gradientFatigue.addColorStop(1, 'rgba(219, 39, 119, 0.0)');
     const gradientSleep = ctxLine.createLinearGradient(0, 0, 0, 400);
-    gradientSleep.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); 
-    gradientSleep.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+    gradientSleep.addColorStop(0, 'rgba(37, 99, 235, 0.3)'); 
+    gradientSleep.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
     conditionChartInstance = new Chart(ctxLine, {
         type: 'line',
         data: {
             labels: mockData.dates,
             datasets: [
-                { label: '疲労度 (1-5)', data: [], borderColor: '#ec4899', backgroundColor: gradientFatigue, borderWidth: 3, pointBackgroundColor: '#ec4899', pointBorderColor: '#fff', pointRadius: 4, fill: true, tension: 0.4, spanGaps: true, yAxisID: 'y' },
-                { label: '睡眠時間 (h)', data: [], borderColor: '#3b82f6', backgroundColor: gradientSleep, borderWidth: 3, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointRadius: 4, fill: true, tension: 0.4, spanGaps: true, yAxisID: 'y1' }
+                { label: '疲労度 (1-5)', data: [], borderColor: '#db2777', backgroundColor: gradientFatigue, borderWidth: 3, pointBackgroundColor: '#db2777', pointBorderColor: '#fff', pointRadius: 4, fill: true, tension: 0.4, spanGaps: true, yAxisID: 'y' },
+                { label: '睡眠時間 (h)', data: [], borderColor: '#2563eb', backgroundColor: gradientSleep, borderWidth: 3, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointRadius: 4, fill: true, tension: 0.4, spanGaps: true, yAxisID: 'y1' }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { position: 'top' }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)' } },
+            plugins: { 
+                legend: { position: 'top' }, 
+                tooltip: { 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#1e293b',
+                    bodyColor: '#475569',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1
+                } 
+            },
             scales: {
-                x: { grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false } },
-                y: { type: 'linear', display: true, position: 'left', min: 1, max: 5, grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false } },
+                x: { grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false } },
+                y: { type: 'linear', display: true, position: 'left', min: 1, max: 5, grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false } },
                 y1: { type: 'linear', display: true, position: 'right', min: 4, max: 10, grid: { drawOnChartArea: false } }
             }
         }
